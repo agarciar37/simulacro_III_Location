@@ -1,8 +1,30 @@
-export function add(a: number, b: number): number {
-  return a + b;
+import { MongoClient } from "mongodb";
+import { resolvers } from "./resolvers.ts";
+import { typeDefs } from "./schema.ts";
+import { LocationModel } from "./types.ts";
+import { startStandaloneServer } from "@apollo/server/standalone";
+import { ApolloServer } from "@apollo/server";
+
+const MONGO_URL = Deno.env.get("MONGO_URL")
+if (!MONGO_URL) {
+  throw new Error("MONGO_URL is not defined");
 }
 
-// Learn more at https://docs.deno.com/runtime/manual/examples/module_metadata#concepts
-if (import.meta.main) {
-  console.log("Add 2 + 3 =", add(2, 3));
-}
+const mongoClient = new MongoClient(MONGO_URL);
+await mongoClient.connect();
+
+console.info("Connected to MongoDB");
+
+const mongoDB = mongoClient.db("Simulacro_III_Locations");
+const LocationCollection = mongoDB.collection<LocationModel>("locations");
+
+const server = new ApolloServer({
+  typeDefs,
+  resolvers,
+});
+
+const { url } = await startStandaloneServer(server, {
+  context: async () => ({ LocationCollection }),
+});
+
+console.info(`Server ready at ${url}`);
